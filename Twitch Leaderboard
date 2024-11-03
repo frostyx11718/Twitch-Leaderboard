@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Twitch Chat Zähler</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            padding: 20px;
+        }
+        #leaderboard {
+            margin-top: 20px;
+            width: 100%;
+            max-width: 400px;
+            max-height: 400px; 
+            overflow-y: auto;  
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #6441A5;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+
+    <h3>Chatter im Twitch-Chat</h3>
+    <div id="leaderboard">
+        <table>
+            <thead>
+                <tr>
+                    <th>Chatter</th>
+                    <th>Anzahl Nachrichten</th>
+                </tr>
+            </thead>
+            <tbody id="leaderboardTable">
+                <!-- Hier werden die Chat-Daten angezeigt -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+    
+        const channelName = ""; // Kanalname des Streamers
+        const oauthToken = ""; // Ersetze durch ein OAuth-Token
+        const chatCounts = {};
+
+        function updateLeaderboard() {
+      
+            const sortedChatters = Object.entries(chatCounts)
+                .sort(([, a], [, b]) => b - a);
+
+            const leaderboardTable = document.getElementById("leaderboardTable");
+            leaderboardTable.innerHTML = "";
+
+            for (const [chatter, count] of sortedChatters) {
+                const row = document.createElement("tr");
+                row.innerHTML = `<td>${chatter}</td><td>${count}</td>`;
+                leaderboardTable.appendChild(row);
+            }
+        }
+
+        function connectToTwitchChat() {
+            const socket = new WebSocket("wss://irc-ws.chat.twitch.tv:443");
+
+            socket.onopen = function() {
+                socket.send(`PASS oauth:${oauthToken}`);
+                socket.send("NICK justinfan12345"); 
+                socket.send(`JOIN #${channelName}`);
+                console.log("Mit Twitch-Chat verbunden");
+            };
+
+            socket.onmessage = function(event) {
+                const message = event.data;
+
+                if (message.includes("PRIVMSG")) {
+                    const chatter = message.match(/:([a-zA-Z0-9_]+)!/)[1];
+                    chatCounts[chatter] = (chatCounts[chatter] || 0) + 1;
+                    updateLeaderboard();
+                }
+            };
+
+            socket.onerror = function(error) {
+                console.error("Verbindung zum Twitch-Chat fehlgeschlagen:", error);
+            };
+        }
+
+        connectToTwitchChat();
+    </script>
+
+</body>
+</html>
